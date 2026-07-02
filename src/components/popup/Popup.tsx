@@ -241,7 +241,7 @@ export function Popup() {
             color: "rgba(255, 255, 255, 0.2)",
           }}
         >
-          v0.1.0
+          v1.0.0
         </div>
       </div>
     </motion.div>
