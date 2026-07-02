@@ -203,14 +203,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return;
       }
 
-      closeTabs(tabIds).then(closed => {
+      closeTabs(tabIds).then(async closed => {
         log("closed", closed.length, "domain tabs");
         saveUndoInfo(closed);
 
-        // If the current tab was closed, create a new tab to keep window open
-        const currentTabClosed = closed.some(t => t.tabId === senderTab?.id);
-        if (currentTabClosed) {
-          chrome.tabs.create({ url: "about:blank" }).catch(() => {});
+        // Only create a new tab if the window has no tabs left
+        const remainingTabs = await chrome.tabs.query({ currentWindow: true });
+        if (remainingTabs.length === 0) {
+          await chrome.tabs.create({ url: "about:blank" }).catch(() => {});
         }
 
         // Show undo on next active tab
@@ -442,9 +442,10 @@ async function closeDomainTabs(): Promise<void> {
   log("keyboard: closed", closed.length, "domain tabs");
   saveUndoInfo(closed);
 
-  const currentTabClosed = closed.some(t => t.tabId === tab.id);
-  if (currentTabClosed) {
-    chrome.tabs.create({ url: "about:blank" }).catch(() => {});
+  // Only create a new tab if the window has no tabs left
+  const remainingTabs = await chrome.tabs.query({ currentWindow: true });
+  if (remainingTabs.length === 0) {
+    await chrome.tabs.create({ url: "about:blank" }).catch(() => {});
   }
 
   setTimeout(() => {
