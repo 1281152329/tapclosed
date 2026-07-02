@@ -379,6 +379,24 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.storage.sync.set({ tapclosed_settings: DEFAULT_SETTINGS });
   }
+  // On update, ensure settings key exists (handles rename from exhale_settings)
+  if (details.reason === "update") {
+    chrome.storage.sync.get(["tapclosed_settings", "exhale_settings"], (result) => {
+      if (result.tapclosed_settings) {
+        // Already exists, nothing to do
+        return;
+      }
+      if (result.exhale_settings) {
+        // Migrate old settings
+        log("migrating settings from exhale_settings to tapclosed_settings");
+        chrome.storage.sync.set({ tapclosed_settings: { ...DEFAULT_SETTINGS, ...result.exhale_settings } });
+        chrome.storage.sync.remove("exhale_settings");
+      } else {
+        // Initialize with defaults
+        chrome.storage.sync.set({ tapclosed_settings: DEFAULT_SETTINGS });
+      }
+    });
+  }
 });
 
 // ── Keyboard commands (work on ALL pages including chrome://) ──

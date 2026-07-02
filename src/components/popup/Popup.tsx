@@ -6,6 +6,7 @@ export function Popup() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [focusEnabled, setFocusEnabled] = useState(true);
   const [loaded, setLoaded] = useState(false);
+  const [hasUndo, setHasUndo] = useState(false);
 
   useEffect(() => {
     chrome.storage.sync.get("tapclosed_settings", (result) => {
@@ -15,6 +16,10 @@ export function Popup() {
       setFocusEnabled(s.focusEnabled !== false);
       setLoaded(true);
     });
+    // Check if there's a pending undo
+    chrome.runtime.sendMessage({ type: "GET_UNDO_INFO" }).then((response) => {
+      setHasUndo(!!(response?.undoInfo && response.undoInfo.length > 0));
+    }).catch(() => {});
   }, []);
 
   const save = (partial: Record<string, unknown>) => {
@@ -28,6 +33,11 @@ export function Popup() {
 
   const sendAction = useCallback((type: string) => {
     chrome.runtime.sendMessage({ type });
+    window.close();
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    chrome.runtime.sendMessage({ type: "UNDO_CLOSE" });
     window.close();
   }, []);
 
@@ -112,6 +122,65 @@ export function Popup() {
       >
         Quick Actions
       </div>
+      {hasUndo && (
+        <button
+          onClick={handleUndo}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "9px 12px",
+            background: "rgba(150, 200, 170, 0.08)",
+            borderRadius: "9px",
+            border: "1px solid rgba(150, 200, 170, 0.15)",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            transition: "all 0.15s ease",
+            width: "100%",
+            textAlign: "left",
+            marginBottom: "6px",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(150, 200, 170, 0.15)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(150, 200, 170, 0.08)";
+          }}
+        >
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "7px",
+              background: "rgba(150, 200, 170, 0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(150,200,170,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7v6h6" />
+              <path d="M3 13a9 9 0 1 0 3-7.7L3 8" />
+            </svg>
+          </div>
+          <div style={{ flex: 1, fontSize: "12px", fontWeight: 600, color: "rgba(150, 200, 170, 0.95)" }}>
+            Undo Close
+          </div>
+          <div
+            style={{
+              fontSize: "10px",
+              color: "rgba(255, 255, 255, 0.25)",
+              background: "rgba(255, 255, 255, 0.04)",
+              padding: "2px 6px",
+              borderRadius: "4px",
+              border: "1px solid rgba(255, 255, 255, 0.04)",
+            }}
+          >
+            Ctrl+Shift+Z
+          </div>
+        </button>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
         <ActionButton
           icon={
